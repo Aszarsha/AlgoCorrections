@@ -1,5 +1,5 @@
-#ifndef STACK_TEST_H
-#define STACK_TEST_H
+#ifndef STACK_TESTS_H
+#define STACK_TESTS_H
 
 #include "stack.h"
 
@@ -13,17 +13,17 @@ typedef enum Op (* select_op_func)( int, int, int );
 /* Super basic operation selection, first all push, them all pop...
  * Implementing different strategies is left as an exercise */
 static enum Op select_op( int numOp, int numPushOp, int numPopOp ) {
-	return numPushOp < numOp/2 ? PUSH_OP : POP_OP;
+	return numPushOp < numOp/2 ? PUSH_OP : PUSH_OP;
 }
+
+static void nop_delf( stack_obj o ) {   ;   }
 
 static void test_stack( int numOp, select_op_func selectOp ) {
 	int numPushOp = 0, numPopOp = 0;
 
-	stack s = stack_create();
+	stack s = stack_new();
 	for ( int i = 0; i < numOp; ++i ) {
-		//printf( "numOp: %d, numPushOp: %d, numPopOp: %d\n", numOp, numPushOp, numPopOp );
 		enum Op op = selectOp( numOp, numPushOp, numPopOp );
-		//printf( "op: %lf\n", op );
 		if ( op == PUSH_OP ) {
 			stack_push( s, NULL );
 			++numPushOp;
@@ -32,10 +32,7 @@ static void test_stack( int numOp, select_op_func selectOp ) {
 			++numPopOp;
 		}
 	}
-	while ( !stack_empty( s ) ) {
-	  stack_pop( s );
-	}
-	stack_destroy( s );
+	stack_delete( s, nop_delf );
 }
 
 int main( int argc, char * argv[] ) {

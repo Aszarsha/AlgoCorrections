@@ -1,5 +1,5 @@
-#ifndef QUEUE_TEST_H
-#define QUEUE_TEST_H
+#ifndef QUEUE_TESTS_H
+#define QUEUE_TESTS_H
 
 #include "queue.h"
 
@@ -16,10 +16,12 @@ static enum Op select_op( int numOp, int numPushOp, int numPopOp ) {
 	return numPushOp < numOp/2 ? PUSH_OP : POP_OP;
 }
 
+static void nop_delf( queue_obj o ) {   ;   }
+
 static void test_queue( int numOp, select_op_func selectOp ) {
 	int numPushOp = 0, numPopOp = 0;
 
-	queue q = queue_create();
+	queue q = queue_new();
 	for ( int i = 0; i < numOp; ++i ) {
 		//printf( "numOp: %d, numPushOp: %d, numPopOp: %d\n", numOp, numPushOp, numPopOp );
 		enum Op op = selectOp( numOp, numPushOp, numPopOp );
@@ -32,10 +34,7 @@ static void test_queue( int numOp, select_op_func selectOp ) {
 			++numPopOp;
 		}
 	}
-	while ( !queue_empty( q ) ) {
-	  queue_pop( q );
-	}
-	queue_destroy( q );
+	queue_delete( q, nop_delf );
 }
 
 int main( int argc, char * argv[] ) {

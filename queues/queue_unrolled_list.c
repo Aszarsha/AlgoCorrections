@@ -16,13 +16,20 @@ exit
 
 typedef struct node_ {
 	struct node_ * next;
-	void * objects[UNROLLING_FACTOR];
+	queue_obj objects[UNROLLING_FACTOR];
 } * node;
 
-static node alloc_node( node next ) {
+static node node_new( node next ) {
 	node n = (node)malloc( sizeof(*n) );
 	n->next = next;
 	return n;
+}
+
+static void node_delete( node n, size_t start, size_t stop, obj_del_func delf ) {
+	for ( size_t i = start; i < stop; ++i ) {
+		delf( n->objects[i] );
+	}
+	free( n );
 }
 
 struct queue_ {
@@ -30,7 +37,7 @@ struct queue_ {
 	ptrdiff_t readIndex, writeIndex;
 };
 
-extern queue queue_create( void ) {
+extern queue queue_new( void ) {
 	queue q = (queue)malloc( sizeof(*q) );
 	q->last = NULL;
 	q->readIndex  = 0;
@@ -38,10 +45,23 @@ extern queue queue_create( void ) {
 	return q;
 }
 
-extern void queue_destroy( queue q ) {
+extern void queue_delete( queue q, obj_del_func delf ) {
 	assert( q );
-	assert( !q->last && "must be empty" );
 
+	if ( q->last ) {
+		node tmp = q->last->next;
+		q->last->next = NULL;   // break cycle
+		node it = tmp->next;
+		node_delete( tmp, q->readIndex, UNROLLING_FACTOR, delf );   // treat first node differently
+		while ( it && it->next ) {   // check of it if only one node
+			node tmp = it;
+			it = it->next;
+			node_delete( tmp, 0, UNROLLING_FACTOR, delf );
+		}
+		if ( it ) {
+			node_delete( it, 0, q->writeIndex, delf );               // treat last node differently
+		}
+	}
 	free( q );
 }
 
@@ -51,7 +71,7 @@ extern int queue_empty( queue q ) {
 	return !q->last;
 }
 
-extern void * queue_front( queue q ) {
+extern queue_obj queue_front( queue q ) {
 	assert( q );
 	assert( q->last && "must not be empty" );
 
@@ -74,15 +94,15 @@ extern void queue_pop( queue q ) {
 	}
 }
 
-extern void queue_push( queue q, void * object ) {
+extern void queue_push( queue q, queue_obj object ) {
 	assert( q );
 
 	if ( !q->last ) {
-		q->last = alloc_node( NULL );
+		q->last = node_new( NULL );
 		q->last->next = q->last;
 	} else if ( q->writeIndex == UNROLLING_FACTOR ) {
 		q->writeIndex = 0;
-		q->last->next = alloc_node( q->last->next );
+		q->last->next = node_new( q->last->next );
 		q->last = q->last->next;
 	}
 	q->last->objects[q->writeIndex] = object;

@@ -19,23 +19,25 @@ exit
 #endif
 
 struct stack_ {
-	void * * vector;
+	stack_obj * vector;
 	ptrdiff_t index;
 	size_t capacity;
 };
 
-extern stack stack_create( void ) {
+extern stack stack_new( void ) {
 	stack s = (stack)malloc( sizeof(*s) );
-	s->vector = (void * *)malloc( BASE_SIZE*sizeof(*s->vector) );
+	s->vector = (stack_obj *)malloc( BASE_SIZE*sizeof(*s->vector) );
 	s->capacity = BASE_SIZE;
 	s->index = 0;
 	return s;
 }
 
-extern void stack_destroy( stack s ) {
+extern void stack_delete( stack s, obj_del_func delf ) {
 	assert( s );
-	assert( !s->index && "must be empty" );
 
+	for ( int i = 0; i < s->index; ++i ) {
+		delf( s->vector[i] );
+	}
 	free( s->vector );
 	free( s );
 }
@@ -46,7 +48,7 @@ extern int stack_empty( stack s ) {
 	return !s->index;
 }
 
-extern void * stack_top( stack s ) {
+extern stack_obj stack_top( stack s ) {
 	assert( s );
 	assert( s->index && "must not be empty" );
 
@@ -60,12 +62,12 @@ extern void stack_pop( stack s ) {
 	--s->index;
 }
 
-extern void stack_push( stack s, void * object ) {
+extern void stack_push( stack s, stack_obj object ) {
 	assert( s );
 
 	if ( s->index == s->capacity ) {
 		s->capacity *= GROWTH_FACTOR;
-		s->vector = (void * *)realloc( s->vector, s->capacity*sizeof(*s->vector) );
+		s->vector = (stack_obj *)realloc( s->vector, s->capacity*sizeof(*s->vector) );
 	}
 	s->vector[s->index] = object;
 	++s->index;

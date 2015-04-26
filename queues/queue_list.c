@@ -11,30 +11,43 @@ exit
 
 typedef struct node_ {
 	struct node_ * next;
-	void * object;
+	queue_obj object;
 } * node;
 
-static node alloc_node( void * object, node next ) {
+static node node_new( queue_obj object, node next ) {
 	node n = (node)malloc( sizeof(*n) );
 	n->object = object;
 	n->next = next;
 	return n;
 }
 
+static void node_delete( node n, obj_del_func delf ) {
+	delf( n->object );
+	free( n );
+}
+
 struct queue_ {
 	node last; //< Circular list!
 };
 
-extern queue queue_create( void ) {
+extern queue queue_new( void ) {
 	queue q = (queue)malloc( sizeof(*q) );
 	q->last = NULL;
 	return q;
 }
 
-extern void queue_destroy( queue q ) {
+extern void queue_delete( queue q, obj_del_func delf ) {
 	assert( q );
-	assert( !q->last && "must be empty" );
 
+	if ( q->last ) {
+		node it = q->last->next;
+		q->last->next = NULL;   // break cycle
+		while ( it ) {
+			node tmp = it;
+			it = it->next;
+			node_delete( tmp, delf );
+		}
+	}
 	free( q );
 }
 
@@ -44,7 +57,7 @@ extern int queue_empty( queue q ) {
 	return !q->last;
 }
 
-extern void * queue_front( queue q ) {
+extern queue_obj queue_front( queue q ) {
 	assert( q );
 	assert( q->last && "must not be empty" );
 
@@ -63,14 +76,14 @@ extern void queue_pop( queue q ) {
 	free( tmp );
 }
 
-extern void queue_push( queue q, void * object ) {
+extern void queue_push( queue q, queue_obj object ) {
 	assert( q );
 
 	if ( !q->last ) {
-		q->last = alloc_node( object, NULL );
+		q->last = node_new( object, NULL );
 		q->last->next = q->last;
 	} else {
-		q->last->next = alloc_node( object, q->last->next );
+		q->last->next = node_new( object, q->last->next );
 		q->last = q->last->next;
 	}
 }

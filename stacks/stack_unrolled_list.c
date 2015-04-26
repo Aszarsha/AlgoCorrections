@@ -16,13 +16,20 @@ exit
 
 typedef struct node_ {
 	struct node_ * next;
-	void * objects[UNROLLING_FACTOR];
+	stack_obj objects[UNROLLING_FACTOR];
 } * node;
 
-static node alloc_node( node next ) {
+static node node_new( node next ) {
 	node n = (node)malloc( sizeof(*n) );
 	n->next = next;
 	return n;
+}
+
+static void node_delete( node n, size_t size, obj_del_func delf ) {
+	for ( size_t i = 0; i < size; ++i ) {
+		delf( n->objects[i] );
+	}
+	free( n );
 }
 
 struct stack_ {
@@ -30,17 +37,23 @@ struct stack_ {
 	ptrdiff_t index;
 };
 
-extern stack stack_create( void ) {
+extern stack stack_new( void ) {
 	stack s = (stack)malloc( sizeof(*s) );
 	s->head = NULL;
 	s->index = 0;
 	return s;
 }
 
-extern void stack_destroy( stack s ) {
+extern void stack_delete( stack s, obj_del_func delf ) {
 	assert( s );
-	assert( !s->head && "must be empty" );
 
+	node it = s->head;
+	while( it ) {
+		node tmp = it;
+		it = it->next;
+		node_delete( tmp, s->index, delf );
+		s->index = UNROLLING_FACTOR;
+	}
 	free( s );
 }
 
@@ -50,7 +63,7 @@ extern int stack_empty( stack s ) {
 	return !s->head;
 }
 
-extern void * stack_top( stack s ) {
+extern stack_obj stack_top( stack s ) {
 	assert( s );
 	assert( s->head && "must not be empty" );
 
@@ -70,11 +83,11 @@ extern void stack_pop( stack s ) {
 	}
 }
 
-extern void stack_push( stack s, void * object ) {
+extern void stack_push( stack s, stack_obj object ) {
 	assert( s );
 
 	if ( !s->head || s->index == UNROLLING_FACTOR ) {
-		s->head = alloc_node( s->head );
+		s->head = node_new( s->head );
 		s->index = 0;
 	}
 	s->head->objects[s->index] = object;

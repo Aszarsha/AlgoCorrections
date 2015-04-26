@@ -3,12 +3,16 @@
 
 typedef struct stack_ * stack;
 
-extern stack stack_create ( void );
-extern void  stack_destroy( stack s ); //< The stack must be empty (pop all elements before if necessary)
+typedef void * stack_obj;
 
-extern int    stack_empty( stack s );
-extern void * stack_top  ( stack s );  //< The stack must not be empty
-extern void   stack_pop  ( stack s );  //< The stack must not be empty
-extern void   stack_push ( stack s, void * object );
+typedef void (*obj_del_func)( stack_obj );
+
+extern stack stack_new   ( void );
+extern void  stack_delete( stack s, obj_del_func delf );
+
+extern int       stack_empty( stack s );
+extern stack_obj stack_top  ( stack s );  //< The stack must not be empty
+extern void      stack_pop  ( stack s );  //< The stack must not be empty
+extern void      stack_push ( stack s, stack_obj object );
 
 #endif

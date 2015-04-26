@@ -22,23 +22,25 @@ exit
 #endif
 
 struct queue_ {
-	void * * vector;
+	queue_obj * vector;
 	size_t pushCount, popCount, capacity;
 };
 
-extern queue queue_create( void ) {
+extern queue queue_new( void ) {
 	queue q = (queue)malloc( sizeof(*q) );
-	q->vector = (void * *)malloc( BASE_SIZE*sizeof(*q->vector) );
+	q->vector = (queue_obj *)malloc( BASE_SIZE*sizeof(*q->vector) );
 	q->capacity = BASE_SIZE;
 	q->pushCount = 0;
 	q->popCount  = 0;
 	return q;
 }
 
-extern void queue_destroy( queue q ) {
+extern void queue_delete( queue q, obj_del_func delf ) {
 	assert( q );
-	assert( q->pushCount == q->popCount && "must be empty" );
 
+	for ( size_t i = q->popCount; i != q->pushCount; i = (i+1)%q->capacity ) {
+		delf( q->vector[i] );
+	}
 	free( q->vector );
 	free( q );
 }
@@ -49,7 +51,7 @@ extern int queue_empty( queue q ) {
 	return q->pushCount == q->popCount;
 }
 
-extern void * queue_front( queue q ) {
+extern queue_obj queue_front( queue q ) {
 	assert( q );
 	assert( q->pushCount != q->popCount && "must not be empty" );
 
@@ -63,12 +65,12 @@ extern void queue_pop( queue q ) {
 	++q->popCount;
 }
 
-extern void queue_push( queue q, void * object ) {
+extern void queue_push( queue q, queue_obj object ) {
 	assert( q );
 
 	if ( q->pushCount - q->popCount >= q->capacity ) {
 		// Manually copy the vector to 'decircularize' the data that still needs to be read
-		void * * tmp = (void * *)malloc( q->capacity*GROWTH_FACTOR*sizeof(*q->vector) );
+		queue_obj * tmp = (queue_obj *)malloc( q->capacity*GROWTH_FACTOR*sizeof(*q->vector) );
 		ptrdiff_t readOffset = q->popCount % q->capacity;
 		for ( int i = 0; i < q->pushCount - q->popCount; ++i ) {
 				tmp[i] = q->vector[i + readOffset];
